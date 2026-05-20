@@ -2,6 +2,7 @@ package animate;
 
 import flixel.FlxG;
 import haxe.io.Bytes;
+import haxe.io.Path;
 import openfl.display.BitmapData;
 
 using StringTools;
@@ -25,8 +26,8 @@ class FlxAnimateAssets
 		#end
 
 		// Fallback to filesystem
-		#if (sys && desktop)
-		return sys.FileSystem.exists(path);
+		#if sys
+		return sys.FileSystem.exists(Path.normalize(path));
 		#end
 
 		return false;
@@ -44,9 +45,10 @@ class FlxAnimateAssets
 		#end
 
 		// Fallback to filesystem
-		#if (sys && desktop)
-		if (sys.FileSystem.exists(path))
-			return sys.io.File.getContent(path);
+		#if sys
+		var normalizedPath = Path.normalize(path);
+		if (sys.FileSystem.exists(normalizedPath))
+			return sys.io.File.getContent(normalizedPath);
 		#end
 
 		return null;
@@ -64,9 +66,10 @@ class FlxAnimateAssets
 		#end
 
 		// Fallback to filesystem
-		#if (sys && desktop)
-		if (sys.FileSystem.exists(path))
-			return sys.io.File.getBytes(path);
+		#if sys
+		var normalizedPath = Path.normalize(path);
+		if (sys.FileSystem.exists(normalizedPath))
+			return sys.io.File.getBytes(normalizedPath);
 		#end
 
 		return null;
@@ -84,9 +87,10 @@ class FlxAnimateAssets
 		#end
 
 		// Fallback to filesystem
-		#if (sys && desktop)
-		if (sys.FileSystem.exists(path))
-			return BitmapData.fromFile(path);
+		#if sys
+		var normalizedPath = Path.normalize(path);
+		if (sys.FileSystem.exists(normalizedPath))
+			return BitmapData.fromFile(normalizedPath);
 		#end
 
 		return null;
@@ -103,41 +107,62 @@ class FlxAnimateAssets
 			result = [];
 
 		// Fallback to filesystem for non-library assets
-		#if (sys && desktop)
+		#if sys
 		if (library == null || library.length == 0)
 		{
-			if (sys.FileSystem.exists(path))
+			var normalizedPath = Path.normalize(path);
+			if (sys.FileSystem.exists(normalizedPath) && sys.FileSystem.isDirectory(normalizedPath))
 			{
-				var files:Array<String> = sys.FileSystem.readDirectory(path);
-				var result:Array<String> = [];
+				var files:Array<String> = sys.FileSystem.readDirectory(normalizedPath);
+				var sysResult:Array<String> = [];
 				var checkSubDirectory:String->Void = null;
 
 				checkSubDirectory = (file) ->
 				{
-					if (sys.FileSystem.isDirectory('$path/$file') && includeSubDirectories)
+					var fullPath = Path.join([normalizedPath, file]);
+					if (sys.FileSystem.exists(fullPath) && sys.FileSystem.isDirectory(fullPath) && includeSubDirectories)
 					{
-						var files = sys.FileSystem.readDirectory('$path/$file').map((subFile) -> '$file/$subFile');
-						for (file in files)
-							checkSubDirectory(file);
+						var subFiles = sys.FileSystem.readDirectory(fullPath).map((subFile) -> Path.join([file, subFile]));
+						for (sf in subFiles)
+							checkSubDirectory(sf);
 					}
 					else
 					{
-						result.push(file);
+						sysResult.push(Path.normalize(file));
 					}
 				};
 
 				for (file in files)
 					checkSubDirectory(file);
 
-				return result;
+				return sysResult;
 			}
 		}
 		#end
 
+		// Safely extract the asset directory search path, stripping potential OpenFL asset library prefix identifiers
+		var assetSearchPath = path.contains(":") ? path.substring(path.indexOf(':') + 1) : path;
+		assetSearchPath = Path.normalize(assetSearchPath);
+
+		// Ensure the search pattern closes out cleanly with a trailing slash for strict directory mapping
+		var searchPattern = assetSearchPath;
+		if (!searchPattern.endsWith("/")) 
+			searchPattern += "/";
+
 		// Get only the files actually contained inside the Texture Atlas folder
-		// Plus some formatting to be easier to use afterwards
-		return result.filter((str) -> str.startsWith(path.substring(path.indexOf(':') + 1, path.length)))
-			.map((str) -> str.split('${path.split(":").pop()}/').pop());
+		// Plus cross-platform formatting to guarantee clean directory returns
+		var filteredResult = result.filter((str) -> {
+			var normalizedStr = Path.normalize(str);
+			return normalizedStr.startsWith(assetSearchPath);
+		});
+
+		return filteredResult.map((str) -> {
+			var normalizedStr = Path.normalize(str);
+			if (normalizedStr.startsWith(searchPattern)) {
+				return normalizedStr.substring(searchPattern.length);
+			}
+			return Path.withoutDirectory(normalizedStr);
+		});
 	}
 }
 
