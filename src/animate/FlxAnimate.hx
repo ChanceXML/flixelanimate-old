@@ -265,7 +265,6 @@ class FlxAnimate extends FlxSprite
 		prepareDrawMatrix(matrix, camera);
 	}
 
-	// I dont think theres a way to override the matrix without needing to do this lol
 	#if (flixel >= "6.1.0")
 	override function drawFrameComplex(frame:FlxFrame, camera:FlxCamera):Void
 	#else
@@ -273,7 +272,7 @@ class FlxAnimate extends FlxSprite
 	#end
 	{
 		#if (flixel < "6.1.0") final frame = this._frame; #end
-		final matrix = this._matrix; // TODO: Just use local?
+		final matrix = this._matrix;
 
 		frame.prepareMatrix(matrix, FlxFrameAngle.ANGLE_0, checkFlipX(), checkFlipY());
 		prepareDrawMatrix(matrix, camera);
@@ -296,7 +295,6 @@ class FlxAnimate extends FlxSprite
 			var angleOff = (frameOffsetAngle - angle) * FlxAngle.TO_RAD;
 			var cos = Math.cos(angleOff);
 			var sin = Math.sin(angleOff);
-			// cos doesnt need to be negated
 			_matrix.rotateWithTrig(cos, -sin);
 			_matrix.translate(-frameOffset.x, -frameOffset.y);
 			_matrix.rotateWithTrig(cos, sin);
@@ -322,7 +320,6 @@ class FlxAnimate extends FlxSprite
 			}
 		}
 
-		// TODO: add some way to customize the order of this thing
 		if (doStageMatrix) matrix.concat(library.matrix);
 
 		getScreenPosition(_point, camera).subtractPoint(offset).add(origin.x, origin.y);
@@ -347,7 +344,6 @@ class FlxAnimate extends FlxSprite
 		stageBg.render(this, camera);
 	}
 
-	// semi stolen from FlxSkewedSprite
 	static var _skewMatrix:FlxMatrix = new FlxMatrix();
 
 	private inline function updateSkew():Void
@@ -359,7 +355,6 @@ class FlxAnimate extends FlxSprite
 	{
 		this.applyStageMatrix = v;
 
-		// Like resetFrame() but for animate
 		if (this.isAnimate)
 			anim.updateTimelineBounds();
 
@@ -409,6 +404,18 @@ class FlxAnimate extends FlxSprite
 			final flipX = checkFlipX();
 			final flipY = checkFlipY();
 			final mat = #if flash new Matrix() #else Matrix.__pool.get() #end;
+			mat.identity();
+
+			if (flipX)
+			{
+				mat.scale(-1, 1);
+				mat.translate(bounds.width, 0);
+			}
+			if (flipY)
+			{
+				mat.scale(1, -1);
+				mat.translate(0, bounds.height);
+			}
 
 			#if flash
 			framePixels = FilterRenderer.getBitmap((cam, m) ->
