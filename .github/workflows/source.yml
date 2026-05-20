@@ -1,0 +1,53 @@
+name: Get SourceCode
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository_url:
+        description: 'GitHub repository URL'
+        required: true
+      branch_or_tag:
+        description: 'Branch or tag to sync'
+        required: false
+        default: ''
+
+jobs:
+  sync-source:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: checkout repo!
+        uses: actions/checkout@v4
+
+      - name: clone target repository
+        run: |
+         REPO_URL="${{ inputs.repository_url }}"
+         REF="${{ inputs.branch_or_tag }}"
+
+         git clone "$REPO_URL" temp_source
+         cd temp_source
+
+         if [ -n "$REF" ]; then
+           git checkout "$REF"
+         fi
+      - name: merge files
+        run: |
+          rm -rf temp_source/.git
+          rm -rf temp_source/.github
+          shopt -s dotglob
+          cp -a temp_source/* ./
+          shopt -u dotglob
+          rm -rf temp_source
+          
+      - name: commit
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add .
+          git reset .github
+          
+          git commit -m "base flixel animate files" || echo "No changes"
+          git push
