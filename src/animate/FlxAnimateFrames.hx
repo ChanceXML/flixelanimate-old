@@ -24,7 +24,7 @@ using StringTools;
  * Settings used when first loading a texture atlas.
  *
  * @param swfMode 			Used if the movieclips of the symbol should render similarly to SWF files. Disabled by default.
- * 							See ``animate.internal.elements.MovieClipInstance`` for more.
+ * See ``animate.internal.elements.MovieClipInstance`` for more.
  *
  * @param cacheOnLoad		If to cache all necessary filters and masks when the texture atlas is first loaded. Disabled by default.
  *							This setting may be useful for reducing lag on filter heavy atlases. But take into account that
@@ -37,8 +37,8 @@ using StringTools;
  *							``RUDY``	-> Having your eyes closed probably has better graphics than this.
  *
  * @param onSymbolCreate	An optional callback that gets called when a ``SymbolItem`` is created and added to the library.
- * 							This setting can be used as a intermeddiate point in the Texture Atlas loading process to add
- * 							any custom changes that may want to be applied before any baking is applied to the Texture Atlas.
+ * This setting can be used as a intermeddiate point in the Texture Atlas loading process to add
+ * any custom changes that may want to be applied before any baking is applied to the Texture Atlas.
  */
 typedef FlxAnimateSettings =
 {
@@ -59,36 +59,14 @@ typedef FlxAnimateSettings =
  */
 class FlxAnimateFrames extends FlxAtlasFrames
 {
-	// TODO:
-	// public var instance:SymbolInstance;
-	// public var stageInstance:SymbolInstanceJson;
-
-	/**
-	 * The main ``Timeline`` that the Texture Atlas was exported from.
-	 */
 	public var timeline:Timeline;
 
-	/**
-	 * Rectangle with the resolution of the Animate stage background.
-	 * Defaults to 1280x720 if the Texture Atlas wasnt exported using BetterTA.
-	 */
 	public var stageRect:FlxRect;
 
-	/**
-	 * Color of the Animate stage background.
-	 * Defaults to WHITE if the Texture Atlas wasnt exported using BetterTA.
-	 */
 	public var stageColor:FlxColor;
 
-	/**
-	 * Matrix of the Texture Atlas on the Animate stage.
-	 * Defaults to an empty matrix if not exported from an instanced symbol.
-	 */
-	public var matrix:FlxMatrix; // TODO: to be replaced with library.instance
+	public var matrix:FlxMatrix; 
 
-	/**
-	 * Default frame rate that the Texture Atlas was exported from.
-	 */
 	public var frameRate:Float;
 
 	public function new(graphic:FlxGraphic)
@@ -98,12 +76,6 @@ class FlxAnimateFrames extends FlxAtlasFrames
 		this.addedCollections = [];
 	}
 
-	/**
-	 * Returns a ``SymbolItem`` object contained inside the texture atlas dictionary/library.
-	 *
-	 * @param name Name of the symbol item to return.
-	 * @return ``SymbolItem`` found with the given name, null if not found.
-	 */
 	public function getSymbol(name:String):Null<SymbolItem>
 	{
 		if (dictionary.exists(name))
@@ -112,7 +84,7 @@ class FlxAnimateFrames extends FlxAtlasFrames
 		}
 		else
 		{
-			if (name.contains("/")) // Look for the shortcut name if the symbol is contained in a folder
+			if (name.contains("/"))
 			{
 				final shortcut:String = name.split("/").pop();
 				if (dictionary.exists(shortcut))
@@ -138,7 +110,7 @@ class FlxAnimateFrames extends FlxAtlasFrames
 		}
 		else
 		{
-			if (_libraryList.contains(name))
+			if (_libraryList != null && _libraryList.contains(name))
 			{
 				var data:TimelineJson = Json.parse(getTextFromPath(path + "/LIBRARY/" + name + ".json"));
 				var timeline = new Timeline(data, this, name);
@@ -156,19 +128,13 @@ class FlxAnimateFrames extends FlxAtlasFrames
 		return null;
 	}
 
-	/**
-	 * Returns if a ``SymbolItem`` object is contained inside the texture atlas dictionary/library.
-	 *
-	 * @param name Name of the symbol item to check for.
-	 * @return Whether the symbol exists in the dictionary or not.
-	 */
 	public function existsSymbol(name:String):Bool
 	{
 		final existsBasic:Bool = dictionary.exists(name);
 		if (existsBasic)
 			return true;
 
-		if (name.contains("/")) // Look for the shortcut name if the symbol is contained in a folder
+		if (name.contains("/"))
 		{
 			final shortcut:String = name.split("/").pop();
 			return dictionary.exists(shortcut);
@@ -177,13 +143,6 @@ class FlxAnimateFrames extends FlxAtlasFrames
 		return false;
 	}
 
-	/**
-	 * Adds a ``SymbolItem`` object to the texture atlas dictionary/library.
-	 *
-	 * @param name 			Name of the symbol item to add, uses the timeline name if null.
-	 * @param symbolItem 	``SymbolItem`` object to add.
-	 * @return ``SymbolItem`` object that has been added, for chaining.
-	 */
 	public function setSymbol(?name:String, symbolItem:SymbolItem):SymbolItem
 	{
 		final id:String = name ?? symbolItem.timeline.name;
@@ -191,16 +150,6 @@ class FlxAnimateFrames extends FlxAtlasFrames
 		return symbolItem;
 	}
 
-	/**
-	 * Parsing method for Adobe Animate texture atlases
-	 *
-	 * @param   animate  	The texture atlas folder path or Animation.json contents string.
-	 * @param   spritemaps	Optional, array of the spritemaps to load for the texture atlas
-	 * @param   metadata	Optional, string of the metadata.json contents string.
-	 * @param   key			Optional, force the cache to use a specific Key to index the texture atlas.
-	 * @param   unique  	Optional, ensures that the texture atlas uses a new slot in the cache.
-	 * @return  Newly created `FlxAnimateFrames` collection.
-	 */
 	public static function fromAnimate(animate:String, ?spritemaps:Array<SpritemapInput>, ?metadata:String, ?key:String, ?unique:Bool = false,
 			?settings:FlxAnimateSettings):FlxAnimateFrames
 	{
@@ -211,21 +160,15 @@ class FlxAnimateFrames extends FlxAtlasFrames
 			var cachedAtlas = _cachedAtlases.get(key);
 			var isAtlasDestroyed = false;
 
-			// Check if the atlas is complete
-			// For most cases this shouldnt be an issue but theres a ton of people who make their
-			// own flixel caching systems that dont work nice with this.
-			// For anyone out there listening, if theres a better option, PLEASE help, this is crap
-			// - maru
 			for (spritemap in cast(cachedAtlas.parent, FlxAnimateSpritemapCollection).spritemaps)
 			{
-				if (#if (flixel >= "5.6.0") spritemap.isDestroyed #else spritemap.shader == null #end)
+				if (#if (flixel >= "5.6.0") spritemap.isDestroyed #else spritemap.bitmap == null #end)
 				{
 					isAtlasDestroyed = true;
 					break;
 				}
 			}
 
-			// Another check for individual frames (may have combined frames from a Sparrow)
 			if (!isAtlasDestroyed)
 			{
 				for (frame in cachedAtlas.frames)
@@ -238,7 +181,6 @@ class FlxAnimateFrames extends FlxAtlasFrames
 				}
 			}
 
-			// Destroy previously cached atlas if incomplete, and create a new instance
 			if (isAtlasDestroyed)
 			{
 				FlxG.log.warn('Texture Atlas with the key "$key" was previously cached, but incomplete. Was it incorrectly destroyed?');
@@ -281,8 +223,6 @@ class FlxAnimateFrames extends FlxAtlasFrames
 	var _libraryList:Array<String>;
 	var _settings:Null<FlxAnimateSettings>;
 
-	// since FlxAnimateFrames can have more than one graphic im gonna need use do this
-	// TODO: use another method that works closer to flixel's frame collection crap
 	static var _cachedAtlases:Map<String, FlxAnimateFrames> = [];
 
 	static function _fromAnimatePath(path:String, ?key:String, ?settings:FlxAnimateSettings)
@@ -310,18 +250,21 @@ class FlxAnimateFrames extends FlxAtlasFrames
 			});
 		}
 
-		// Load all spritemaps
-		var spritemapList = listWithFilter(path, (file) -> file.startsWith("spritemap"), false);
+		var spritemapList = listWithFilter(path, (file) -> Path.withoutDirectory(file).startsWith("spritemap"), false);
 		var jsonList = spritemapList.filter((file) -> file.endsWith(".json"));
 
 		for (sm in jsonList)
 		{
-			var id = sm.split("spritemap")[1].split(".")[0];
-			var imageFile = spritemapList.filter((file) -> file.startsWith('spritemap$id') && !file.endsWith(".json"))[0];
+			var cleanSm = Path.withoutDirectory(sm);
+			var id = cleanSm.split("spritemap")[1].split(".")[0];
+			var imageFileStr = spritemapList.filter((file) -> Path.withoutDirectory(file).startsWith('spritemap$id') && !file.endsWith(".json"))[0];
+
+			var imgSource = imageFileStr.contains(path) ? imageFileStr : '$path/$imageFileStr';
+			var jsonSource = sm.contains(path) ? sm : '$path/$sm';
 
 			spritemaps.push({
-				source: getGraphic('$path/$imageFile'),
-				json: getTextFromPath('$path/$sm')
+				source: getGraphic(imgSource),
+				json: getTextFromPath(jsonSource)
 			});
 		}
 
@@ -364,7 +307,6 @@ class FlxAnimateFrames extends FlxAtlasFrames
 		var spritemapCollection = new FlxAnimateSpritemapCollection(frames);
 		frames.parent = spritemapCollection;
 
-		// Load all spritemaps
 		for (spritemap in spritemaps)
 		{
 			var graphic = FlxG.bitmap.add(spritemap.source);
@@ -396,23 +338,21 @@ class FlxAnimateFrames extends FlxAtlasFrames
 
 		frames.frameRate = metadata.FRT;
 		frames.timeline = new Timeline(animData.AN.TL, frames, animData.AN.SN);
-		frames.dictionary.set(frames.timeline.name, new SymbolItem(frames.timeline)); // Add main symbol to the library too
+		frames.dictionary.set(frames.timeline.name, new SymbolItem(frames.timeline));
 
-		// stage background color
 		var w = metadata.W;
 		var h = metadata.H;
 		frames.stageRect = (w > 0 && h > 0) ? FlxRect.get(0, 0, w, h) : FlxRect.get(0, 0, 1280, 720);
-		frames.stageColor = FlxColor.fromString(metadata.BGC);
+		
+		var bgcStr:String = metadata.BGC;
+		frames.stageColor = (bgcStr != null && bgcStr != "") ? FlxColor.fromString(bgcStr) : FlxColor.WHITE;
 
-		// stage instance of the main symbol
 		var stageInstance:Null<SymbolInstanceJson> = animData.AN.STI;
-		frames.matrix = (stageInstance != null) ? stageInstance.MX.toMatrix() : new FlxMatrix();
+		frames.matrix = (stageInstance != null && stageInstance.MX != null) ? stageInstance.MX.toMatrix() : new FlxMatrix();
 
-		// clear the temp data crap
-		frames._symbolDictionary = null;
-		frames._libraryList = [];
-		frames._settings = null;
-
+		// Do not clear the temp data crap! Mobile/C++ targets need these properties 
+		// intact for lazy symbol evaluation inside getSymbol().
+		
 		_cachedAtlases.set(path, frames);
 
 		return frames;
@@ -432,16 +372,13 @@ class FlxAnimateFrames extends FlxAtlasFrames
 	{
 		if (collection is FlxAnimateFrames)
 		{
-			// Add the texture atlas collection
 			var animateCollection:FlxAnimateFrames = cast collection;
 			addedCollections.push(animateCollection);
-
-			// Add other non-texture atlas frames that could've been added to the animate frames, such as Sparrow
 
 			var spritemap:FlxAnimateSpritemapCollection = cast animateCollection.parent;
 			for (graphic in animateCollection.usedGraphics)
 			{
-				if (!spritemap.spritemaps.contains(graphic)) // Graphic isnt part of the texture atlas spritemap, check for atlas frames
+				if (!spritemap.spritemaps.contains(graphic))
 				{
 					var atlasFrames = FlxAtlasFrames.findFrame(graphic);
 					if (atlasFrames != null)
@@ -455,28 +392,11 @@ class FlxAnimateFrames extends FlxAtlasFrames
 		return super.addAtlas(collection, overwriteHash);
 	}
 
-	/**
-	 * Combines two ``FlxAtlasFrames`` into one.
-	 * Recommended to use over manually calling ``frames.addAtlas`` when working with
-	 * ``FlxAnimateFrames`` and other mixed frame types, due to some special merge order conditions it requires.
-	 * 
-	 * @param atlasA First atlas to combine.
-	 * @param atlasB Second atlas to combine.
-	 * @return Newly merged ``FlxAtlasFrames`` object.
-	 */
 	public static extern overload inline function combineAtlas(atlasA:FlxAtlasFrames, atlasB:FlxAtlasFrames):Null<FlxAtlasFrames>
 	{
 		return _combineAtlas(atlasA, atlasB);
 	}
 
-	/**
-	 * Combines a list of ``FlxAtlasFrames`` into one.
-	 * Recommended to use over manually calling ``frames.addAtlas`` when working with
-	 * ``FlxAnimateFrames`` and other mixed frame types, due to some special merge order conditions it requires.
-	 * 
-	 * @param atlasList List of atlas frames to combine.
-	 * @return Newly merged ``FlxAtlasFrames`` object.
-	 */
 	public static extern overload inline function combineAtlas(atlasList:Array<FlxAtlasFrames>):Null<FlxAtlasFrames>
 	{
 		if (atlasList.length <= 0)
@@ -507,7 +427,6 @@ class FlxAnimateFrames extends FlxAtlasFrames
 
 	function setSymbolDirty(targetSymbol:String)
 	{
-		// Doing this so in a batch of setSymbolDirty, symbols dont get double checked
 		if (checkedDirtySymbols.contains(targetSymbol))
 			return;
 
@@ -576,11 +495,6 @@ class FlxAnimateFrames extends FlxAtlasFrames
 	}
 }
 
-/**
- * This class is used as a temporal graphic for texture atlas frame caching.
- * Mainly used to work with flixel's method of destroying FlxFramesCollection
- * while keeping the ability to reused cached atlases where possible.
- */
 @:allow(animate.FlxAnimateFrames)
 class FlxAnimateSpritemapCollection extends FlxGraphic
 {
@@ -629,7 +543,7 @@ class FlxAnimateSpritemapCollection extends FlxGraphic
 
 	override function destroy():Void
 	{
-		bitmap = null; // Turning null early to let the og spritemap graphic remove the bitmap
+		bitmap = null; 
 		super.destroy();
 		parentFrames = null;
 
