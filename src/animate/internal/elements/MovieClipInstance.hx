@@ -212,6 +212,7 @@ class MovieClipInstance extends SymbolInstance
 	}
 }
 
+@:forward(length)
 extern abstract BakedFramesVector(Array<AtlasInstance>)
 {
 	public inline function new(length:Int)
