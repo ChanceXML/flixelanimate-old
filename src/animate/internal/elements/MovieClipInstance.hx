@@ -69,25 +69,15 @@ class MovieClipInstance extends SymbolInstance
 			this._dirty = true;
 		}
 
-		// Set whole frame for blending
-		// if (this.blend != null && !Blend.isGpuSupported(this.blend))
-		//	frame._dirty = true;
-
 		// Cache all frames on start, if set by the settings
 		if (_cacheOnLoad && _dirty)
 		{
-			final length:Int = swfMode ? 1 : libraryItem.timeline.frameCount;
+			final length:Int = swfMode ? 1 : (libraryItem != null && libraryItem.timeline != null ? libraryItem.timeline.frameCount : 1);
 			for (i in 0...length)
 				_bakeFilters(_filters, getFrameIndex(i, 0));
 		}
 	}
 
-	/**
-	 * Changes the filters of the movieclip.
-	 * Requires the movieclip to be rebaked when called.
-	 *
-	 * @param filters An array with ``BitmapFilter`` objects to apply to the movieclip.
-	 */
 	public function setFilters(?filters:Array<BitmapFilter>):Void
 	{
 		this._filters = filters;
@@ -95,10 +85,6 @@ class MovieClipInstance extends SymbolInstance
 		setDirty();
 	}
 
-	/**
-	 * Clears up the memory from the previously baked frames and
-	 * sets the movieclip ready for a new rebake of masks/filters.
-	 */
 	public function setDirty():Void
 	{
 		if (_requireBake)
@@ -133,9 +119,12 @@ class MovieClipInstance extends SymbolInstance
 		}
 
 		if (_bakedFrames == null)
-			_bakedFrames = new BakedFramesVector(this.libraryItem.timeline.frameCount);
+		{
+			var frameCount = (libraryItem != null && libraryItem.timeline != null) ? libraryItem.timeline.frameCount : 1;
+			_bakedFrames = new BakedFramesVector(frameCount);
+		}
 
-		if (_bakedFrames[frameIndex] != null)
+		if (frameIndex < 0 || frameIndex >= _bakedFrames.length || _bakedFrames[frameIndex] != null)
 			return;
 
 		var scale = FlxPoint.get(1, 1);
@@ -156,10 +145,6 @@ class MovieClipInstance extends SymbolInstance
 			}
 		}
 
-		// TODO: double check this, i *think* this is applied later so its not necessary here
-		// scale.x /= Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b);
-		// scale.y /= Math.sqrt(matrix.c * matrix.c + matrix.d * matrix.d);
-
 		var bakedFrame:Null<AtlasInstance> = FilterRenderer.bakeFilters(this, frameIndex, filters, scale, _filterQuality);
 		scale.put();
 
@@ -172,7 +157,6 @@ class MovieClipInstance extends SymbolInstance
 		if (bakedFrame.frame == null || bakedFrame.frame.frame.isEmpty)
 			bakedFrame.visible = false;
 
-		// All frames have been baked
 		if (_dirty && _bakedFrames.isFull())
 			_dirty = false;
 	}
@@ -191,8 +175,8 @@ class MovieClipInstance extends SymbolInstance
 	{
 		if (_bakedFrames != null)
 		{
-			var index = getFrameIndex(index, frameIndex);
-			var bakedFrame = _bakedFrames.findFrame(index);
+			var targetIndex = getFrameIndex(index, frameIndex);
+			var bakedFrame = _bakedFrames.findFrame(targetIndex);
 
 			if (bakedFrame != null)
 			{
@@ -232,6 +216,7 @@ extern abstract BakedFramesVector(Array<AtlasInstance>)
 {
 	public inline function new(length:Int)
 	{
+		if (length <= 0) length = 1;
 		#if cpp
 		this = cpp.NativeArray.create(length);
 		#else
@@ -248,11 +233,11 @@ extern abstract BakedFramesVector(Array<AtlasInstance>)
 
 	public inline function setNull(index:Int):Void
 	{
+		if (index < 0 || index >= this.length) return;
 		var frame = get(index);
 		if (frame == null)
 			return;
 
-		// Manually clear the baked bitmaps
 		if (frame.frame != null)
 		{
 			frame.frame.parent = FlxDestroyUtil.destroy(frame.frame.parent);
@@ -270,6 +255,7 @@ extern abstract BakedFramesVector(Array<AtlasInstance>)
 
 	public inline function findFrame(index:Int):Null<AtlasInstance>
 	{
+		if (this.length <= 0) return null;
 		final max:Int = this.length - 1;
 		final lowerBound:Int = (index < 0) ? 0 : index;
 		return get((lowerBound > max) ? max : lowerBound);
