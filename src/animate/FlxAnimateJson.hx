@@ -22,31 +22,31 @@ import openfl.filters.BevelFilter;
 
 extern typedef SpritemapJson =
 {
-	ATLAS:
+	?ATLAS:
 	{
-		SPRITES:Array<SpriteJson>
+		?SPRITES:Array<SpriteJson>
 	},
-	meta:SpritemapMeta
+	?meta:SpritemapMeta
 }
 
 extern typedef SpritemapMeta =
 {
-	app:String,
-	version:String,
-	image:String,
-	format:String,
-	size:
+	?app:String,
+	?version:String,
+	?image:String,
+	?format:String,
+	?size:
 	{
-		w:Int, h:Int
+		?w:Int, ?h:Int
 	},
-	resolution:String
+	?resolution:String
 }
 
 extern typedef SpriteJson =
 {
-	SPRITE:
+	?SPRITE:
 	{
-		name:String, x:Float, y:Float, w:Float, h:Float, rotated:Bool
+		?name:String, ?x:Float, ?y:Float, ?w:Float, ?h:Float, ?rotated:Bool
 	}
 }
 
@@ -149,10 +149,10 @@ extern abstract FrameJson(Dynamic)
 
 extern typedef SoundJson =
 {
-	N:String,
-	SNC:String,
-	LP:String,
-	RP:Int
+	?N:String,
+	?SNC:String,
+	?LP:String,
+	?RP:Int
 }
 
 extern abstract ElementJson(Dynamic)
@@ -205,16 +205,23 @@ abstract SymbolInstanceJson(Dynamic)
 	function get_B()
 	{
 		var blend:Dynamic = this.B ?? this.blend;
-		if (blend != null) // blends from BTA
+		if (blend != null) 
 			return blend;
 
-		var blend:Null<String> = this.IN;
-		if (blend != null && blend.length > 0)
+		var blendStr:Null<String> = this.IN;
+		if (blendStr != null && blendStr.length > 0)
 		{
-			if (blend.contains("_bl")) // legacy blends method
+			if (blendStr.contains("_bl"))
 			{
-				var index:Int = Std.parseInt(blend.split("_bl")[1].split("_")[0]);
-				return this.B = index;
+				var parts = blendStr.split("_bl");
+				if (parts.length > 1) 
+				{
+					var subParts = parts[1].split("_");
+					if (subParts.length > 0) 
+					{
+						return this.B = Std.parseInt(subParts[0]);
+					}
+				}
 			}
 		}
 
@@ -330,11 +337,14 @@ abstract FilterJson(Dynamic)
 		var alphas:Array<Float> = [];
 		var ratios:Array<Float> = [];
 
-		for (entry in GE)
+		if (GE != null)
 		{
-			colors.push(FlxColor.fromString(entry.C));
-			alphas.push(entry.A);
-			ratios.push(entry.R);
+			for (entry in GE)
+			{
+				colors.push(FlxColor.fromString(entry.C));
+				alphas.push(entry.A);
+				ratios.push(entry.R);
+			}
 		}
 
 		return {
@@ -357,48 +367,46 @@ abstract FilterJson(Dynamic)
 
 	public function toBitmapFilter():BitmapFilter
 	{
+		var safeStr:Float = STR ?? 0;
+
 		switch (this.N)
 		{
 			case "blurFilter" | "BLF":
-				var blf = new BlurFilter(BLX, BLY, Q);
+				var blf = new BlurFilter(BLX ?? 0, BLY ?? 0, Q ?? 1);
 				return blf;
 
 			case "adjustColorFilter" | "ACF":
 				var acf = new AdjustColorFilter();
-				acf.set(BRT, H, CT, SAT);
+				acf.set(BRT ?? 0, H ?? 0, CT ?? 0, SAT ?? 0);
 				return acf.filter;
 
 			case "dropShadowFilter" | "DSF":
-				var dsf = new DropShadowFilter(D, AL, FlxColor.fromString(C), A, BLX, BLY, STR, Q, IN, KK, HO);
+				var dsf = new DropShadowFilter(D ?? 0, AL ?? 0, FlxColor.fromString(C), A, BLX ?? 0, BLY ?? 0, safeStr, Q ?? 1, IN, KK, HO);
 				return dsf;
 
 			case "glowFilter" | "GF":
-				var gf = new GlowFilter(FlxColor.fromString(C), A, BLX, BLY, STR / 100, Q, IN, KK);
+				var gf = new GlowFilter(FlxColor.fromString(C), A, BLX ?? 0, BLY ?? 0, safeStr / 100, Q ?? 1, IN, KK);
 				return gf;
-
-				// TODO: add missing filters support for other targets
-				// case "gradientBevelFilter" | "GBF":
-				// case "gradientGlowFilter" | "GGF":
 
 			#if (flash || openfl >= "9.5.0")
 			case "bevelFilter" | "BF":
 				var highlightColor = FlxColor.fromString(HC);
 				var shadowColor = FlxColor.fromString(SC);
 				var type:BitmapFilterType = getBitmapFilterType();
-				var bf = new BevelFilter(D, AL, highlightColor, HA, shadowColor, SA, BLX, BLY, STR, Q, type, KK);
+				var bf = new BevelFilter(D ?? 0, AL ?? 0, highlightColor, HA, shadowColor, SA, BLX ?? 0, BLY ?? 0, safeStr, Q ?? 1, type, KK);
 				return bf;
 			#end
 			#if flash
 			case "gradientBevelFilter" | "GBF":
 				var type:BitmapFilterType = getBitmapFilterType();
 				var ga = getGradientArray();
-				var gbf = new flash.filters.GradientBevelFilter(D, AL, ga.colors, ga.alphas, ga.ratios, BLX, BLY, STR, Q, type, KK);
+				var gbf = new flash.filters.GradientBevelFilter(D ?? 0, AL ?? 0, ga.colors, ga.alphas, ga.ratios, BLX ?? 0, BLY ?? 0, safeStr, Q ?? 1, type, KK);
 				return gbf;
 
 			case "gradientGlowFilter" | "GGF":
 				var type:BitmapFilterType = getBitmapFilterType();
 				var ga = getGradientArray();
-				var ggf = new flash.filters.GradientGlowFilter(D, AL, ga.colors, ga.alphas, ga.ratios, BLX, BLY, STR, Q, type, KK);
+				var ggf = new flash.filters.GradientGlowFilter(D ?? 0, AL ?? 0, ga.colors, ga.alphas, ga.ratios, BLX ?? 0, BLY ?? 0, safeStr, Q ?? 1, type, KK);
 				return ggf;
 			#end
 
@@ -674,8 +682,8 @@ extern abstract ColorJson(Dynamic)
 
 extern typedef TransformationPointJson =
 {
-	x:Float,
-	y:Float
+	?x:Float,
+	?y:Float
 }
 
 abstract MatrixJson(Array<Float>) from Array<Float>
@@ -689,11 +697,20 @@ abstract MatrixJson(Array<Float>) from Array<Float>
 
 	public static function resolve(input:Dynamic):MatrixJson
 	{
+		if (input == null)
+			return [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+
 		var mat2D:Null<MatrixJson> = input.MX ?? input.Matrix;
 		if (mat2D != null)
 			return mat2D;
 
 		var m:Dynamic = input.M3D ?? input.Matrix3D;
+		
+		// CRITICAL FIX: If Animate exported no matrix at all, provide an identity matrix
+		// instead of passing a null object down into array indexing.
+		if (m == null)
+			return [1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
+
 		var mat3D:Array<Float>;
 
 		if (m is Array)
